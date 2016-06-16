@@ -2,8 +2,7 @@
 import numpy as np
 
 CONST_VELOCITY = 0
-THRESHOLD_RADIUS = 10
-TIMER = 0
+THRESHOLD_RADIUS = 3
 
 
 class VicsekModel(object):
@@ -23,7 +22,7 @@ class VicsekModel(object):
         :param round_spps:
         :return:
         """
-        self._averaged_angle(round_spps) + self._white_noise(time)
+        return self._averaged_angle(round_spps) + self._white_noise(time)
 
     def moving_radius(self, self_spp, updated_theta):
         """
@@ -65,9 +64,7 @@ class SPP(VicsekModel):
         super(SPP, self).__init__(pos_x=pos_x, pos_y=pos_y, idx=self.PARTICLE_TOTAL_NUMBER)
         self._update_polar_axis()  # デカルト座標が決まっていれば、極表を更新
 
-    def update(self, another_SPPs):
-        global TIMER
-        TIMER = TIMER + 1
+    def update(self, another_SPPs, time):
         # THRESHOLD_RADIUS 内にある粒子を取得
         valid_spps = []
         for another_SPP in another_SPPs:
@@ -75,14 +72,16 @@ class SPP(VicsekModel):
                 valid_spps.append(another_SPP)
 
         # THRESHOLD_RADIUS内にある粒子から位置を更新
-        self.update_position(valid_spps)
+        self.update_position(valid_spps, time)
 
         # 極座標の更新
         self._update_descarts_axis()
 
-    def update_position(self, valid_round_spps):
-        global TIMER
-        self.theta = self.moving_theta(TIMER, valid_round_spps)
+    def update_position(self, valid_round_spps, time):
+        # print("---- update position ----")
+        # print("有効範囲に在る粒子の数は{number}個です。".format(number=len(valid_round_spps)))
+        self.theta = self.moving_theta(time, valid_round_spps)
+        # print("THETA = {0}".format(self.theta))
         self.radius = self.moving_radius(self, self.theta)
 
     def _spp_distance(self, another_SPP):
@@ -92,8 +91,12 @@ class SPP(VicsekModel):
         return np.sqrt(kyori)
 
     def _update_polar_axis(self):
-        self.theta = np.arctan(self.pos_y / self.pos_x)
-        self.radius = np.sqrt(self.pos_x ** 2 + self.pos_y ** 2)
+        if self.pos_x:
+            self.theta = np.arctan(self.pos_y / self.pos_x)
+            self.radius = np.sqrt(self.pos_x ** 2 + self.pos_y ** 2)
+        else:
+            self.theta = 0
+            self.radius = 0
 
     def _update_descarts_axis(self):
         self.pos_x = self.radius * np.cos(self.theta)
